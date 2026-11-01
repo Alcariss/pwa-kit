@@ -1,5 +1,5 @@
 import { ERROR_CODES, type SessionClaims } from '../../src/contract.js';
-import { getApp, type AppSpec } from './apps.js';
+import { getApp, getTable, type TableSpec } from './apps.js';
 import { allowedEmails, devOrigins, gristBaseUrl, nowSeconds, type Deps, type Env } from './env.js';
 import { parseInput, toItem } from './fields.js';
 import { gristTable, UpstreamError, type GristRecord, type GristTable } from './grist.js';
@@ -7,16 +7,16 @@ import { corsHeaders, failure, preflight, success, type ResponseContext } from '
 import { readSession } from './tokens.js';
 
 type ActionContext = {
-  app: AppSpec;
-  table: GristTable;
+  spec: TableSpec;
+  grist: GristTable;
   claims: SessionClaims;
   params: URLSearchParams;
   respond: ResponseContext;
   now: () => number;
 };
 
-function ownerFilter(app: AppSpec, claims: SessionClaims): Record<string, string[]> {
-  return app.ownerColumn ? { [app.ownerColumn]: [claims.sub] } : {};
+function ownerFilter(spec: TableSpec, claims: SessionClaims): Record<string, string[]> {
+  return spec.ownerColumn ? { [spec.ownerColumn]: [claims.sub] } : {};
 }
 
 function parseRowId(raw: string | null): number | null {
@@ -25,44 +25,44 @@ function parseRowId(raw: string | null): number | null {
 
 /** The row, if it exists and (with `ownerColumn`) belongs to the caller. */
 async function findOwnedRow(context: ActionContext, id: number): Promise<GristRecord | null> {
-  const rows = await context.table.list({ filter: { id: [id], ...ownerFilter(context.app, context.claims) } });
+  const rows = await context.grist.list({ filter: { id: [id], ...ownerFilter(context.spec, context.claims) } });
   return rows[0] ?? null;
 }
 
 async function listRows(context: ActionContext): Promise<Response> {
-  const { app, claims } = context;
-  const rows = await context.table.list({ filter: ownerFilter(app, claims), sort: app.grist.sort });
-  return success(rows.map((row) => toItem(app, row)), context.respond);
+  const { spec, claims } = context;
+  const rows = await context.grist.list({ filter: ownerFilter(spec, claims), sort: spec.sort });
+  return success(rows.map((row) => toItem(spec, row)), context.respond);
 }
 
 async function addRow(context: ActionContext): Promise<Response> {
-  const { app } = context;
-  const input = parseInput(app, context.params, 'create');
+  const { spec } = context;
+  const input = parseInput(spec, context.params, 'create');
   if (!input.ok) {
     return failure(ERROR_CODES.VALIDATION_ERROR, input.message, 400, context.respond);
   }
 
   const now = new Date(context.now()).toISOString();
   const columns: Record<string, unknown> = { ...input.columns };
-  if (app.timestamps) {
-    columns[app.timestamps.createdAt] = now;
-    columns[app.timestamps.updatedAt] = now;
+  if (spec.timestamps) {
+    columns[spec.timestamps.createdAt] = now;
+    columns[spec.timestamps.updatedAt] = now;
   }
-  if (app.ownerColumn) {
-    columns[app.ownerColumn] = context.claims.sub;
+  if (spec.ownerColumn) {
+    columns[spec.ownerColumn] = context.claims.sub;
   }
 
-  const id = await context.table.add(columns);
-  return success(toItem(app, { id, fields: columns }), context.respond);
+  const id = await context.grist.add(columns);
+  return success(toItem(spec, { id, fields: columns }), context.respond);
 }
 
 async function editRow(context: ActionContext): Promise<Response> {
-  const { app } = context;
+  const { spec } = context;
   const id = parseRowId(context.params.get('id'));
   if (id === null) {
     return failure(ERROR_CODES.VALIDATION_ERROR, 'id must be a positive integer', 400, context.respond);
   }
-  const input = parseInput(app, context.params, 'update');
+  const input = parseInput(spec, context.params, 'update');
   if (!input.ok) {
     return failure(ERROR_CODES.VALIDATION_ERROR, input.message, 400, context.respond);
   }
@@ -73,11 +73,11 @@ async function editRow(context: ActionContext): Promise<Response> {
   }
 
   const columns: Record<string, unknown> = { ...input.columns };
-  if (app.timestamps) {
-    columns[app.timestamps.updatedAt] = new Date(context.now()).toISOString();
+  if (spec.timestamps) {
+    columns[spec.timestamps.updatedAt] = new Date(context.now()).toISOString();
   }
-  await context.table.update(id, columns);
-  return success(toItem(app, { id, fields: { ...existing.fields, ...columns } }), context.respond);
+  await context.grist.update(id, columns);
+  return success(toItem(spec, { id, fields: { ...existing.fields, ...columns } }), context.respond);
 }
 
 async function deleteRow(context: ActionContext): Promise<Response> {
@@ -91,7 +91,7 @@ async function deleteRow(context: ActionContext): Promise<Response> {
     return failure(ERROR_CODES.NOT_FOUND, `No record ${id}`, 404, context.respond);
   }
 
-  await context.table.remove(id);
+  await context.grist.remove(id);
   return success(null, context.respond);
 }
 
@@ -139,16 +139,23 @@ export async function handleApi(request: Request, url: URL, env: Env, deps: Deps
     return failure(ERROR_CODES.UNSUPPORTED_ACTION, 'Unsupported action', 400, respond);
   }
 
-  const table = gristTable({
+  const tableName = url.searchParams.get('table');
+  const spec = getTable(app, tableName);
+  if (spec === null) {
+    const message = tableName === null ? 'table is required' : `Unknown table ${tableName}`;
+    return failure(ERROR_CODES.VALIDATION_ERROR, message, 400, respond);
+  }
+
+  const grist = gristTable({
     baseUrl: gristBaseUrl(env),
     apiKey: env.GRIST_API_KEY,
-    documentId: app.grist.documentId,
-    tableId: app.grist.tableId,
+    documentId: app.documentId,
+    tableId: spec.tableId,
     fetch: deps.fetch
   });
 
   try {
-    return await action({ app, table, claims, params: url.searchParams, respond, now: deps.now });
+    return await action({ spec, grist, claims, params: url.searchParams, respond, now: deps.now });
   } catch (error) {
     console.error(JSON.stringify({ event: 'api_error', app: appId, error: String(error) }));
     if (error instanceof UpstreamError) {

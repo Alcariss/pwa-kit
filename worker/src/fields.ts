@@ -1,4 +1,4 @@
-import type { AppSpec, FieldSpec } from './apps.js';
+import type { FieldSpec, TableSpec } from './apps.js';
 import type { GristRecord } from './grist.js';
 
 export type ParseResult =
@@ -8,7 +8,7 @@ export type ParseResult =
 type ValueResult = { ok: true; value: unknown } | { ok: false; message: string };
 
 /** Query parameters that are not record fields. */
-const RESERVED_PARAMS = new Set(['action', 'id', 'token']);
+const RESERVED_PARAMS = new Set(['action', 'id', 'table', 'token']);
 const DEFAULT_MAX_TEXT_LENGTH = 10_000;
 
 function isRealDate(value: string): boolean {
@@ -30,19 +30,27 @@ function parseValue(name: string, spec: FieldSpec, raw: string): ValueResult {
   switch (spec.type) {
     case 'text': {
       const maxLength = spec.maxLength ?? DEFAULT_MAX_TEXT_LENGTH;
-      return raw.length > maxLength
-        ? { ok: false, message: `${name} is longer than ${maxLength} characters` }
-        : { ok: true, value: raw };
+      if (raw.length > maxLength) {
+        return { ok: false, message: `${name} is longer than ${maxLength} characters` };
+      }
+      if (spec.oneOf && !spec.oneOf.includes(raw)) {
+        return { ok: false, message: `${name} must be one of ${spec.oneOf.join(', ')}` };
+      }
+      return { ok: true, value: raw };
     }
     case 'date':
       return isRealDate(raw)
         ? { ok: true, value: raw }
         : { ok: false, message: `${name} must be a date as YYYY-MM-DD` };
     case 'number': {
-      const value = Number(raw);
-      return Number.isFinite(value)
-        ? { ok: true, value }
-        : { ok: false, message: `${name} must be a number` };
+      const value = Number(raw.replace(',', '.'));
+      if (!Number.isFinite(value)) {
+        return { ok: false, message: `${name} must be a number` };
+      }
+      if (spec.min !== undefined && value < spec.min) {
+        return { ok: false, message: `${name} must be at least ${spec.min}` };
+      }
+      return { ok: true, value };
     }
     case 'boolean':
       if (raw === 'true' || raw === '1') {
@@ -56,18 +64,18 @@ function parseValue(name: string, spec: FieldSpec, raw: string): ValueResult {
 }
 
 /**
- * Validates request parameters against the app's fields and returns Grist
+ * Validates request parameters against the table's fields and returns Grist
  * columns. `create` needs every required field; `update` takes any subset.
  */
-export function parseInput(app: AppSpec, params: URLSearchParams, mode: 'create' | 'update'): ParseResult {
+export function parseInput(table: TableSpec, params: URLSearchParams, mode: 'create' | 'update'): ParseResult {
   for (const name of params.keys()) {
-    if (!RESERVED_PARAMS.has(name) && !Object.hasOwn(app.fields, name)) {
+    if (!RESERVED_PARAMS.has(name) && !Object.hasOwn(table.fields, name)) {
       return { ok: false, message: `Unknown field ${name}` };
     }
   }
 
   const columns: Record<string, unknown> = {};
-  for (const [name, spec] of Object.entries(app.fields)) {
+  for (const [name, spec] of Object.entries(table.fields)) {
     const raw = params.get(name);
     if (raw === null) {
       if (mode === 'create' && spec.required) {
@@ -107,14 +115,14 @@ function readValue(spec: FieldSpec, value: unknown): unknown {
 }
 
 /** A Grist record as the app sees it: `id`, the configured fields, and timestamps. */
-export function toItem(app: AppSpec, record: GristRecord): Record<string, unknown> {
+export function toItem(table: TableSpec, record: GristRecord): Record<string, unknown> {
   const item: Record<string, unknown> = { id: String(record.id) };
-  for (const [name, spec] of Object.entries(app.fields)) {
+  for (const [name, spec] of Object.entries(table.fields)) {
     item[name] = readValue(spec, record.fields[spec.column ?? name]);
   }
-  if (app.timestamps) {
-    item.createdAt = String(record.fields[app.timestamps.createdAt] ?? '');
-    item.updatedAt = String(record.fields[app.timestamps.updatedAt] ?? '');
+  if (table.timestamps) {
+    item.createdAt = String(record.fields[table.timestamps.createdAt] ?? '');
+    item.updatedAt = String(record.fields[table.timestamps.updatedAt] ?? '');
   }
   return item;
 }

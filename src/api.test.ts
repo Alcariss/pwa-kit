@@ -111,6 +111,31 @@ describe('createApiClient', () => {
 });
 
 describe('createResource', () => {
+  it('names its table on every action', async () => {
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(ok([]))
+      .mockResolvedValueOnce(ok({ id: '1', text: 'x' }))
+      .mockResolvedValueOnce(ok({ id: '1', text: 'y' }))
+      .mockResolvedValueOnce(ok(null));
+    const resource = createResource(createApiClient(config(), { fetch: fetchMock }), {
+      table: 'items',
+      mapRow: mapNote,
+      toParams: (input: { text: string }) => ({ text: input.text, table: 'other' })
+    });
+
+    await resource.list();
+    await resource.create({ text: 'x' });
+    await resource.update('1', { text: 'y' });
+    await resource.remove('1');
+
+    expect([0, 1, 2, 3].map((call) => requestedUrl(fetchMock, call).searchParams.get('table'))).toEqual([
+      'items',
+      'items',
+      'items',
+      'items'
+    ]);
+  });
+
   it('sends the id alongside the mapped fields on update', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(ok({ id: '7', text: 'edited' }));
     const resource = createResource(createApiClient(config(), { fetch: fetchMock }), {

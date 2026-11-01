@@ -170,6 +170,8 @@ export function createApiClient(config: ApiConfig, options: ApiClientOptions = {
 }
 
 export type ResourceOptions<T, TInput> = {
+  /** Which of the app's tables to use; needed when the app has more than one. */
+  table?: string;
   /** Turns one untrusted row from the backend into the app's type. Throw on rows you cannot use. */
   mapRow(row: unknown): T;
   /** Turns the app's input into query parameters for `add` and `edit`. */
@@ -188,9 +190,11 @@ export function createResource<T, TInput>(
   client: ApiClient,
   options: ResourceOptions<T, TInput>
 ): Resource<T, TInput> {
+  const table: RequestParams = options.table === undefined ? {} : { table: options.table };
+
   return {
     async list() {
-      const { data, diagnostics } = await client.request<unknown>('fetch', {}, { allowFallback: true });
+      const { data, diagnostics } = await client.request<unknown>('fetch', table, { allowFallback: true });
       if (!Array.isArray(data)) {
         throw new ApiError(ERROR_CODES.INVALID_RESPONSE, 'fetch did not return a list');
       }
@@ -198,17 +202,17 @@ export function createResource<T, TInput>(
     },
 
     async create(input) {
-      const { data } = await client.request<unknown>('add', options.toParams(input));
+      const { data } = await client.request<unknown>('add', { ...options.toParams(input), ...table });
       return options.mapRow(data);
     },
 
     async update(id, input) {
-      const { data } = await client.request<unknown>('edit', { ...options.toParams(input), id });
+      const { data } = await client.request<unknown>('edit', { ...options.toParams(input), ...table, id });
       return options.mapRow(data);
     },
 
     async remove(id) {
-      await client.request<null>('delete', { id });
+      await client.request<null>('delete', { ...table, id });
     }
   };
 }

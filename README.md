@@ -79,26 +79,38 @@ app's Grist table. The Grist API key and OAuth secrets never reach the browser.
 ### Adding an app to the worker
 
 Add an entry to `worker/src/apps.ts`, keyed by the app id (the last path
-segment of its API URL):
+segment of its API URL). Each app has one Grist document and one or more
+tables:
 
 ```ts
 'time-tracker': {
   origins: [GITHUB_PAGES],
-  grist: { documentId: 'abc123', tableId: 'Entries', sort: '-date,-start_time' },
-  fields: {
-    date: { type: 'date', required: true },
-    startTime: { type: 'text', column: 'start_time', required: true },
-    hours: { type: 'number', required: true },
-    activity: { type: 'text', maxLength: 500 }
-  },
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
-  ownerColumn: 'owner' // optional: each user sees only their own rows
+  documentId: 'abc123',
+  tables: {
+    entries: {
+      tableId: 'Entries',
+      sort: '-date,-start_time',
+      fields: {
+        date: { type: 'date', required: true },
+        startTime: { type: 'text', column: 'start_time', required: true },
+        hours: { type: 'number', required: true, min: 0 },
+        activity: { type: 'text', maxLength: 500, oneOf: ['work', 'study'] }
+      },
+      timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+      ownerColumn: 'owner' // optional: each user sees only their own rows
+    }
+  }
 }
 ```
 
+With more than one table, the app names the table per resource:
+`createResource(client, { table: 'entries', mapRow, toParams })`, which sends
+`?table=entries`. With a single table, `table` can be left out.
+
 Then `npx wrangler secret put ALLOWED_EMAILS_TIME_TRACKER` and `npx wrangler
-deploy`. The worker rejects unknown fields, missing required fields, invalid
-dates and non-numbers before calling Grist.
+deploy`. The worker rejects unknown fields and tables, missing required fields,
+invalid dates, non-numbers, numbers below `min`, and text outside `oneOf`
+before calling Grist.
 
 ### Sign-in
 
