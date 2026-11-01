@@ -48,7 +48,6 @@ const TIMESTAMPS = { createdAt: 'created_at', updatedAt: 'updated_at' } as const
 
 const SKLEPMISTR_CATEGORIES = ['water', 'food', 'hygiene', 'medicine', 'energy', 'other'] as const;
 
-
 export const APPS: Readonly<Record<string, AppSpec>> = {
   // The starter app in `template/`: Grist document "pwa-kit Notes".
   notes: {
@@ -115,7 +114,7 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
         sort: '-date,-created_at',
         fields: {
           date: { type: 'date', required: true },
-          workout: { type: 'text', required: true, oneOf: ['A', 'B'] },
+          workout: { type: 'text', required: true, oneOf: ['A', 'B', 'Q'] },
           exercise: { type: 'text', required: true, maxLength: 40 },
           variant: { type: 'text', required: true, maxLength: 60 },
           setNumber: { type: 'number', column: 'set_number', required: true, min: 1 },

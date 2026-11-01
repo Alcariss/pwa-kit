@@ -101,7 +101,7 @@ describe('reps', () => {
     expect(backends.rows.get(1)).toMatchObject({ set_number: 1, owner: ME });
   });
 
-  it('rejects a workout other than A or B', async () => {
+  it('rejects a workout other than A, B or Q', async () => {
     const { send } = setup();
 
     const response = await send(
@@ -109,7 +109,7 @@ describe('reps', () => {
       await asMeOnReps()
     );
 
-    expect(await response.json()).toMatchObject({ errorCode: 'VALIDATION_ERROR', message: 'workout must be one of A, B' });
+    expect(await response.json()).toMatchObject({ errorCode: 'VALIDATION_ERROR', message: 'workout must be one of A, B, Q' });
   });
 
   it('reads body measurements from the Body table', async () => {
