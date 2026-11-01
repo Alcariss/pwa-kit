@@ -43,6 +43,7 @@ export class FakeBackends {
   readonly rows = new Map<number, Record<string, unknown>>();
   readonly calls: Call[] = [];
   gristDown = false;
+  ntfyDown = false;
   googleUser: { email: string; email_verified: boolean } = { email: ME, email_verified: true };
   githubEmails: { email: string; verified: boolean }[] = [{ email: ME, verified: true }];
   private nextId = 1;
@@ -57,6 +58,10 @@ export class FakeBackends {
     return this.calls.filter((call) => call.url.host === 'grist.example');
   }
 
+  ntfyCalls(): Call[] {
+    return this.calls.filter((call) => call.url.host === 'ntfy.sh');
+  }
+
   readonly fetch: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
@@ -65,6 +70,12 @@ export class FakeBackends {
 
     if (url.host === 'grist.example') {
       return this.grist(method, url, body);
+    }
+    if (url.host === 'ntfy.sh') {
+      if (this.ntfyDown) {
+        throw new TypeError('network error');
+      }
+      return json({ id: 'msg' });
     }
     if (url.href === 'https://oauth2.googleapis.com/token') {
       return json({ access_token: 'google-access' });
@@ -119,9 +130,14 @@ export function setup(envOverrides: Partial<Env> = {}) {
   const backends = new FakeBackends();
   const env = testEnv(envOverrides);
   const handle = createHandler({ fetch: backends.fetch, now: () => NOW_MS });
+  /** Promises handed to `ctx.waitUntil`. */
+  const background: Promise<unknown>[] = [];
+  const ctx = { waitUntil: (promise: Promise<unknown>) => void background.push(promise) };
   return {
     backends,
     env,
-    send: (path: string, init: RequestInit = {}) => handle(new Request(`${WORKER}${path}`, init), env)
+    background,
+    settle: () => Promise.all(background),
+    send: (path: string, init: RequestInit = {}) => handle(new Request(`${WORKER}${path}`, init), env, ctx)
   };
 }

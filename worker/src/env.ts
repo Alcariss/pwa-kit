@@ -8,7 +8,7 @@ export type Env = {
   GOOGLE_CLIENT_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
-} & Partial<Record<`ALLOWED_EMAILS_${string}`, string>>;
+} & Partial<Record<`ALLOWED_EMAILS_${string}` | `NTFY_TOPIC_${string}`, string>>;
 
 /** What the handler needs from the outside world; tests replace both. */
 export type Deps = {
@@ -16,6 +16,9 @@ export type Deps = {
   /** Milliseconds since the epoch. */
   now: () => number;
 };
+
+/** Work that may finish after the response is sent (`ctx.waitUntil`). */
+export type WaitUntil = (promise: Promise<unknown>) => void;
 
 const DEFAULT_GRIST_BASE_URL = 'https://docs.getgrist.com';
 const DEFAULT_SESSION_TTL_DAYS = 90;

@@ -32,6 +32,21 @@ export type TableSpec = {
   timestamps?: { createdAt: string; updatedAt: string } | false;
   /** Column holding the signed-in email. Set it and each user sees only their own rows. */
   ownerColumn?: string;
+  /** Push a notification through ntfy after each `add`. Needs the `NTFY_TOPIC_<APP_ID>` secret. */
+  notify?: NotifySpec;
+};
+
+export type NotifySpec = {
+  /** Notification title, usually the app name. */
+  title: string;
+  /** API field whose value becomes the message, or a function of the new item. */
+  body: string | ((item: Readonly<Record<string, unknown>>) => string);
+  /** Page opened when the notification is tapped, e.g. the app's GitHub Pages URL. */
+  click: string;
+  /** ntfy server; defaults to https://ntfy.sh. */
+  server?: string;
+  /** ntfy tags; names of emoji such as `speech_balloon` show as icons. */
+  tags?: readonly string[];
 };
 
 export type AppSpec = {

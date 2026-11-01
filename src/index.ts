@@ -6,3 +6,4 @@ export * from './store.js';
 export * from './auth.js';
 export * from './dates.js';
 export * from './ui.js';
+export * from './install.js';

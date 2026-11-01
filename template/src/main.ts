@@ -18,9 +18,11 @@ import {
   renderDiagnostics,
   renderLoginScreen,
   requiredElement,
+  setupInstallHint,
   setupUpdatePrompt,
   toIsoDate,
-  type Diagnostics
+  type Diagnostics,
+  type InstallHint
 } from '@alcariss/pwa-kit';
 import { toNote, toNoteParams, type Note, type NoteInput } from './notes';
 
@@ -39,6 +41,17 @@ const signInRequired = config.authProviders.length > 0;
 
 setupUpdatePrompt(registerSW);
 
+let installHint: InstallHint | null = null;
+
+/** Shown before sign-in too: an app installed on iOS starts signed out. */
+function showInstallHint(target: HTMLElement): void {
+  installHint?.dispose();
+  installHint = setupInstallHint(target, {
+    storageKey: 'notes:install-hint-dismissed',
+    signInRequired
+  });
+}
+
 function showLogin(message: string | null = null): void {
   store.clear();
   renderLoginScreen(root, {
@@ -47,6 +60,7 @@ function showLogin(message: string | null = null): void {
     message,
     onSelect: (provider) => auth.login(provider)
   });
+  showInstallHint(requiredElement('.pk-login', root));
 }
 
 function showApp(): void {
@@ -56,6 +70,7 @@ function showApp(): void {
         <h1>${escapeHtml(APP_NAME)}</h1>
         ${signInRequired ? '<button id="logout" type="button" class="link">Sign out</button>' : ''}
       </header>
+      <div id="install-hint"></div>
       <form id="add-form" class="card">
         <textarea id="add-text" rows="3" required placeholder="Write a note…"></textarea>
         <div class="row">
@@ -69,6 +84,7 @@ function showApp(): void {
       <footer class="version">${escapeHtml(__APP_VERSION__)}</footer>
     </main>
   `;
+  showInstallHint(requiredElement('#install-hint'));
 
   const form = requiredElement<HTMLFormElement>('#add-form');
   const text = requiredElement<HTMLTextAreaElement>('#add-text');

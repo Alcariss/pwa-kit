@@ -64,6 +64,60 @@
   border-color: var(--pk-accent);
 }
 
+.pk-install-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--pk-accent);
+  border-radius: var(--pk-radius);
+  background: var(--pk-surface);
+  color: var(--pk-text);
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.pk-install-hint p {
+  margin: 0;
+}
+
+.pk-install-hint-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.pk-install-hint-steps li + li {
+  margin-top: 0.25rem;
+}
+
+.pk-install-hint-note {
+  color: var(--pk-muted);
+  font-size: 0.85rem;
+}
+
+.pk-install-hint-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.pk-install-hint-actions button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--pk-accent);
+  border-radius: var(--pk-radius);
+  background: transparent;
+  color: var(--pk-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pk-install-hint-actions .pk-install-hint-install {
+  background: var(--pk-accent);
+  color: var(--pk-accent-text);
+}
+
 .pk-debug {
   margin-top: 2rem;
   font-size: 0.8rem;
