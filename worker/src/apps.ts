@@ -38,10 +38,10 @@ export type AppSpec = {
 const GITHUB_PAGES = 'https://alcariss.github.io';
 
 export const APPS: Readonly<Record<string, AppSpec>> = {
-  // The starter app in `template/`. Replace the document id with your own.
+  // The starter app in `template/`: Grist document "pwa-kit Notes".
   notes: {
     origins: [GITHUB_PAGES],
-    grist: { documentId: 'REPLACE_WITH_GRIST_DOC_ID', tableId: 'Notes', sort: '-date,-created_at' },
+    grist: { documentId: 'nU5bcqehQxe3En3PvDhfgj', tableId: 'Notes', sort: '-date,-created_at' },
     fields: {
       date: { type: 'date', required: true },
       text: { type: 'text', required: true, maxLength: 5000 }
