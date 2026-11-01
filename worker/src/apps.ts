@@ -70,7 +70,7 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
   // Blackout supplies, shared by the whole family: Grist document "Sklepmistr".
   sklepmistr: {
     origins: [GITHUB_PAGES],
-    documentId: 'REPLACE_WITH_SKLEPMISTR_DOC_ID',
+    documentId: '8wnBsuyyWnm3bxZXeJwLSU',
     tables: {
       items: {
         tableId: 'Items',
