@@ -48,8 +48,6 @@ const TIMESTAMPS = { createdAt: 'created_at', updatedAt: 'updated_at' } as const
 
 const SKLEPMISTR_CATEGORIES = ['water', 'food', 'hygiene', 'medicine', 'energy', 'other'] as const;
 
-// TODO: replace with the id of the Grist document "Reps" once it exists.
-const REPS_DOCUMENT_ID = 'TODO_REPS_DOCUMENT_ID';
 
 export const APPS: Readonly<Record<string, AppSpec>> = {
   // The starter app in `template/`: Grist document "pwa-kit Notes".
@@ -110,7 +108,7 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
   // created_at, updated_at). Dates, owner and timestamps are Text columns.
   reps: {
     origins: [GITHUB_PAGES],
-    documentId: REPS_DOCUMENT_ID,
+    documentId: '3vYtBHaDN7fmXiyFEjXU8f',
     tables: {
       sets: {
         tableId: 'Sets',
