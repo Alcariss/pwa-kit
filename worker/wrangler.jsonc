@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pwa-kit-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": {
+    "enabled": true
+  },
+  // Secrets (set with `npx wrangler secret put <NAME>`, never commit them):
+  //   GRIST_API_KEY, SESSION_SECRET,
+  //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
+  //   ALLOWED_EMAILS_<APP_ID>   e.g. ALLOWED_EMAILS_NOTES="me@example.com,partner@example.com"
+  "vars": {
+    "GRIST_BASE_URL": "https://docs.getgrist.com",
+    // Where `npm run dev` / `npm run preview` of an app may receive a session.
+    "DEV_ORIGINS": "http://localhost:5173,http://localhost:4173",
+    "SESSION_TTL_DAYS": "90"
+  }
+}

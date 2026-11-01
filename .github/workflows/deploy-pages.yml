@@ -1,0 +1,78 @@
+name: Deploy PWA to GitHub Pages
+
+# Called from each app's own workflow:
+#   jobs:
+#     deploy:
+#       uses: Alcariss/pwa-kit/.github/workflows/deploy-pages.yml@v1
+#       with: { auth-providers: google,github }
+#       secrets: { VITE_API_URL_PRIMARY: ${{ secrets.VITE_API_URL_PRIMARY }} }
+# The caller grants `pages: write` and `id-token: write`.
+
+on:
+  workflow_call:
+    inputs:
+      base-path:
+        description: Path the app is served under. Defaults to /<repository name>/.
+        type: string
+        default: ''
+      auth-providers:
+        description: Comma-separated sign-in providers (google, github). Empty for no sign-in.
+        type: string
+        default: ''
+      node-version:
+        type: string
+        default: '24'
+    secrets:
+      VITE_API_URL_PRIMARY:
+        required: true
+      VITE_API_URL_FALLBACK:
+        required: false
+      VITE_API_TOKEN:
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run test --if-present
+
+      - name: Build
+        # Vite reads VITE_* straight from the environment; nothing is written to disk.
+        env:
+          INPUT_BASE_PATH: ${{ inputs.base-path }}
+          VITE_AUTH_PROVIDERS: ${{ inputs.auth-providers }}
+          VITE_API_URL_PRIMARY: ${{ secrets.VITE_API_URL_PRIMARY }}
+          VITE_API_URL_FALLBACK: ${{ secrets.VITE_API_URL_FALLBACK }}
+          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
+        run: |
+          export VITE_BASE_PATH="${INPUT_BASE_PATH:-/${GITHUB_REPOSITORY#*/}/}"
+          export VITE_APP_VERSION="${GITHUB_SHA::7}"
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

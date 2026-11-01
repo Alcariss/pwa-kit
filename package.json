@@ -1,0 +1,41 @@
+{
+  "name": "@alcariss/pwa-kit",
+  "version": "1.0.0",
+  "description": "Shared foundation for Alcariss micro PWAs: Vite/PWA config, API client, offline cache, sign-in and UI helpers.",
+  "type": "module",
+  "repository": "github:Alcariss/pwa-kit",
+  "files": [
+    "dist",
+    "tsconfig.base.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && cp src/styles.css dist/styles.css",
+    "release": "scripts/release.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "vite": "^7.0.0 || ^8.0.0",
+    "vite-plugin-pwa": "^1.0.0 || ^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "happy-dom": "^20.14.6",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vite-plugin-pwa": "^1.0.3",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,130 @@
+:root {
+  --pk-accent: #2563eb;
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: #f8fafc;
+  color: #1f2933;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem 2rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.9rem;
+}
+
+form.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+textarea,
+input,
+button {
+  font: inherit;
+}
+
+textarea,
+input {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  /* iOS widens date inputs past their container without this. */
+  appearance: none;
+  min-width: 0;
+}
+
+button {
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--pk-accent);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button.link {
+  padding: 0.2rem 0.4rem;
+  background: none;
+  color: var(--pk-accent);
+  font-weight: 500;
+}
+
+button.danger {
+  color: #b91c1c;
+}
+
+.status {
+  min-height: 1.4em;
+  color: #6b7280;
+}
+
+.status[data-tone='error'] {
+  color: #b91c1c;
+}
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.note p {
+  margin: 0.4rem 0 0;
+  white-space: pre-wrap;
+}
+
+.note-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: #6b7280;
+  text-align: center;
+}
+
+.version {
+  margin-top: 2rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-align: center;
+}

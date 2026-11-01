@@ -1,0 +1,4 @@
+{
+  "extends": "@alcariss/pwa-kit/tsconfig.base.json",
+  "include": ["src", "vite.config.ts", "pwa-assets.config.ts"]
+}

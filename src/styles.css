@@ -1,0 +1,82 @@
+/* Base styles for the pieces pwa-kit renders. Override the custom properties per app. */
+:root {
+  --pk-accent: #2563eb;
+  --pk-accent-text: #ffffff;
+  --pk-surface: #ffffff;
+  --pk-text: #1f2933;
+  --pk-muted: #6b7280;
+  --pk-radius: 10px;
+}
+
+.pk-update-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1rem;
+  padding-top: max(0.6rem, env(safe-area-inset-top));
+  background: var(--pk-accent);
+  color: var(--pk-accent-text);
+  font-size: 0.95rem;
+}
+
+.pk-update-banner button {
+  border: 1px solid currentColor;
+  border-radius: var(--pk-radius);
+  background: transparent;
+  color: inherit;
+  padding: 0.3rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pk-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 22rem;
+  margin: 15vh auto 0;
+  padding: 0 1rem;
+  text-align: center;
+  color: var(--pk-text);
+}
+
+.pk-login-message {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.pk-login-button {
+  padding: 0.8rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: var(--pk-radius);
+  background: var(--pk-surface);
+  color: var(--pk-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pk-login-button:hover {
+  border-color: var(--pk-accent);
+}
+
+.pk-debug {
+  margin-top: 2rem;
+  font-size: 0.8rem;
+  color: var(--pk-muted);
+}
+
+.pk-debug dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  word-break: break-all;
+}
+
+.pk-debug dd {
+  margin: 0;
+}
