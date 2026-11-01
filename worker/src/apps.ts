@@ -48,6 +48,7 @@ const TIMESTAMPS = { createdAt: 'created_at', updatedAt: 'updated_at' } as const
 
 const SKLEPMISTR_CATEGORIES = ['water', 'food', 'hygiene', 'medicine', 'energy', 'other'] as const;
 
+
 export const APPS: Readonly<Record<string, AppSpec>> = {
   // The starter app in `template/`: Grist document "pwa-kit Notes".
   notes: {
@@ -97,6 +98,49 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
           targetDays: { type: 'number', column: 'target_days', required: true, min: 1 }
         },
         timestamps: TIMESTAMPS
+      }
+    }
+  },
+
+  // Home workout tracker, each user sees only their own rows: Grist document "Reps".
+  // Columns: Sets(date, workout, exercise, variant, set_number, reps, seconds, rir, band, note,
+  // owner, created_at, updated_at), Body(date, weight, waist, steps, protein, note, owner,
+  // created_at, updated_at). Dates, owner and timestamps are Text columns.
+  reps: {
+    origins: [GITHUB_PAGES],
+    documentId: '3vYtBHaDN7fmXiyFEjXU8f',
+    tables: {
+      sets: {
+        tableId: 'Sets',
+        sort: '-date,-created_at',
+        fields: {
+          date: { type: 'date', required: true },
+          workout: { type: 'text', required: true, oneOf: ['A', 'B'] },
+          exercise: { type: 'text', required: true, maxLength: 40 },
+          variant: { type: 'text', required: true, maxLength: 60 },
+          setNumber: { type: 'number', column: 'set_number', required: true, min: 1 },
+          reps: { type: 'number', min: 0 },
+          seconds: { type: 'number', min: 0 },
+          rir: { type: 'number', min: 0 },
+          band: { type: 'number', min: 0 },
+          note: { type: 'text', maxLength: 500 }
+        },
+        timestamps: TIMESTAMPS,
+        ownerColumn: 'owner'
+      },
+      body: {
+        tableId: 'Body',
+        sort: '-date',
+        fields: {
+          date: { type: 'date', required: true },
+          weight: { type: 'number', min: 0 },
+          waist: { type: 'number', min: 0 },
+          steps: { type: 'number', min: 0 },
+          protein: { type: 'number', min: 0 },
+          note: { type: 'text', maxLength: 500 }
+        },
+        timestamps: TIMESTAMPS,
+        ownerColumn: 'owner'
       }
     }
   }

@@ -20,6 +20,7 @@ export function testEnv(overrides: Partial<Env> = {}): Env {
     GITHUB_CLIENT_SECRET: 'github-secret',
     ALLOWED_EMAILS_NOTES: `${ME}, ${PARTNER.toUpperCase()}`,
     ALLOWED_EMAILS_SKLEPMISTR: ME,
+    ALLOWED_EMAILS_REPS: ME,
     ...overrides
   };
 }
