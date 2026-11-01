@@ -83,7 +83,8 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
           packageSize: { type: 'number', column: 'package_size', min: 0 },
           dailyUse: { type: 'number', column: 'daily_use', min: 0 },
           expiry: { type: 'date' },
-          note: { type: 'text', maxLength: 1000 }
+          note: { type: 'text', maxLength: 1000 },
+          barcode: { type: 'text', maxLength: 14 }
         },
         timestamps: TIMESTAMPS
       },
