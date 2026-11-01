@@ -83,3 +83,40 @@ describe('field rules', () => {
     expect(backends.rows.get(1)).toMatchObject({ package_size: 1.5 });
   });
 });
+
+describe('reps', () => {
+  async function asMeOnReps(): Promise<RequestInit> {
+    return { headers: { Authorization: `Bearer ${await sessionFor(ME, 'reps')}`, Origin: APP_ORIGIN } };
+  }
+
+  it('stores a logged set with its owner and mapped columns', async () => {
+    const { send, backends } = setup();
+
+    const response = await send(
+      `/reps?action=add&table=sets&date=2026-11-02&workout=A&exercise=squat&variant=goblet-squat&setNumber=1&reps=12&rir=2`,
+      await asMeOnReps()
+    );
+
+    expect(await response.json()).toMatchObject({ data: { exercise: 'squat', setNumber: 1, reps: 12, rir: 2 } });
+    expect(backends.rows.get(1)).toMatchObject({ set_number: 1, owner: ME });
+  });
+
+  it('rejects a workout other than A or B', async () => {
+    const { send } = setup();
+
+    const response = await send(
+      `/reps?action=add&table=sets&date=2026-11-02&workout=C&exercise=squat&variant=goblet-squat&setNumber=1`,
+      await asMeOnReps()
+    );
+
+    expect(await response.json()).toMatchObject({ errorCode: 'VALIDATION_ERROR', message: 'workout must be one of A, B' });
+  });
+
+  it('reads body measurements from the Body table', async () => {
+    const { send, backends } = setup();
+
+    await send(`/reps?action=fetch&table=body`, await asMeOnReps());
+
+    expect(backends.gristCalls()[0]?.url.pathname).toMatch(/\/tables\/Body\/records$/);
+  });
+});
