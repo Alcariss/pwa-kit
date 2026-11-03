@@ -82,6 +82,24 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
     }
   },
 
+  // Family quotes, shared by everyone on the allowlist: Grist document "Hlášky".
+  hanushlasky: {
+    origins: [GITHUB_PAGES],
+    documentId: 'r7UEV7ogACUR',
+    tables: {
+      quotes: {
+        tableId: 'Sheet1',
+        sort: '-date,-created_at',
+        fields: {
+          date: { type: 'date', required: true },
+          text: { type: 'text', required: true, maxLength: 5000 }
+        },
+        timestamps: TIMESTAMPS,
+        notify: { title: 'Hlášky', body: 'text', click: 'https://alcariss.github.io/hanushlasky/' }
+      }
+    }
+  },
+
   // Blackout supplies, shared by the whole family: Grist document "Sklepmistr".
   sklepmistr: {
     origins: [GITHUB_PAGES],
