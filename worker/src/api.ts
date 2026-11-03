@@ -107,6 +107,30 @@ const ACTIONS: Record<string, (context: ActionContext) => Promise<Response>> = {
   delete: deleteRow
 };
 
+const MEDIA_NAME = /^[a-z0-9][a-z0-9-]{0,63}\.(gif|webp|png|jpg)$/;
+
+/**
+ * `?action=media&name=<file>`: a file from the `MEDIA` KV namespace, for
+ * licensed images that must not sit in a public repo. Same sign-in as data.
+ */
+async function serveMedia(env: Env, appId: string, name: string | null, respond: ResponseContext): Promise<Response> {
+  if (name === null || !MEDIA_NAME.test(name)) {
+    return failure(ERROR_CODES.VALIDATION_ERROR, 'name must be a file name like squat.gif', 400, respond);
+  }
+  const file = env.MEDIA ? await env.MEDIA.getWithMetadata<{ contentType?: string }>(`${appId}/${name}`, 'arrayBuffer') : null;
+  if (file === null || file.value === null) {
+    return failure(ERROR_CODES.NOT_FOUND, `No media ${name}`, 404, respond);
+  }
+  return new Response(file.value, {
+    status: 200,
+    headers: {
+      ...respond.cors,
+      'Content-Type': file.metadata?.contentType ?? 'application/octet-stream',
+      'Cache-Control': 'private, max-age=604800'
+    }
+  });
+}
+
 /** `GET /<appId>?action=...` with `Authorization: Bearer <session>`. */
 export async function handleApi(
   request: Request,
@@ -143,6 +167,10 @@ export async function handleApi(
   // Checked on every request, so removing an email from the list revokes its sessions.
   if (!allowedEmails(env, appId).has(claims.sub.toLowerCase())) {
     return failure(ERROR_CODES.FORBIDDEN, 'This account has no access to the app', 403, respond);
+  }
+
+  if (url.searchParams.get('action') === 'media') {
+    return await serveMedia(env, appId, url.searchParams.get('name'), respond);
   }
 
   const action = ACTIONS[url.searchParams.get('action') ?? ''];
