@@ -1,9 +1,10 @@
 import { ERROR_CODES, type SessionClaims } from '../../src/contract.js';
 import { getApp, getTable, type TableSpec } from './apps.js';
-import { allowedEmails, devOrigins, gristBaseUrl, nowSeconds, type Deps, type Env } from './env.js';
+import { allowedEmails, devOrigins, gristBaseUrl, nowSeconds, type Deps, type Env, type WaitUntil } from './env.js';
 import { parseInput, toItem } from './fields.js';
 import { gristTable, UpstreamError, type GristRecord, type GristTable } from './grist.js';
 import { corsHeaders, failure, preflight, success, type ResponseContext } from './http.js';
+import { ntfyTopic, publishNotification } from './notify.js';
 import { readSession } from './tokens.js';
 
 type ActionContext = {
@@ -13,6 +14,8 @@ type ActionContext = {
   params: URLSearchParams;
   respond: ResponseContext;
   now: () => number;
+  /** Runs after a successful add; must not throw or block the response. */
+  onAdded: (item: Record<string, unknown>) => void;
 };
 
 function ownerFilter(spec: TableSpec, claims: SessionClaims): Record<string, string[]> {
@@ -53,7 +56,9 @@ async function addRow(context: ActionContext): Promise<Response> {
   }
 
   const id = await context.grist.add(columns);
-  return success(toItem(spec, { id, fields: columns }), context.respond);
+  const item = toItem(spec, { id, fields: columns });
+  context.onAdded(item);
+  return success(item, context.respond);
 }
 
 async function editRow(context: ActionContext): Promise<Response> {
@@ -103,7 +108,13 @@ const ACTIONS: Record<string, (context: ActionContext) => Promise<Response>> = {
 };
 
 /** `GET /<appId>?action=...` with `Authorization: Bearer <session>`. */
-export async function handleApi(request: Request, url: URL, env: Env, deps: Deps): Promise<Response> {
+export async function handleApi(
+  request: Request,
+  url: URL,
+  env: Env,
+  deps: Deps,
+  waitUntil: WaitUntil
+): Promise<Response> {
   const appId = url.pathname.replace(/^\/+|\/+$/g, '');
   const app = getApp(appId);
   const respond: ResponseContext = {
@@ -154,8 +165,16 @@ export async function handleApi(request: Request, url: URL, env: Env, deps: Deps
     fetch: deps.fetch
   });
 
+  const notify = spec.notify;
+  const topic = notify ? ntfyTopic(env, appId) : null;
+  const onAdded = (item: Record<string, unknown>): void => {
+    if (notify && topic) {
+      waitUntil(publishNotification(deps.fetch, notify, topic, item, appId));
+    }
+  };
+
   try {
-    return await action({ spec, grist, claims, params: url.searchParams, respond, now: deps.now });
+    return await action({ spec, grist, claims, params: url.searchParams, respond, now: deps.now, onAdded });
   } catch (error) {
     console.error(JSON.stringify({ event: 'api_error', app: appId, error: String(error) }));
     if (error instanceof UpstreamError) {

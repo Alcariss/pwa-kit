@@ -35,8 +35,9 @@ existing lockfile are fine on either.
    ```
 2. **Name it.** Edit `name` in `package.json`, the manifest fields in
    `vite.config.ts`, `<title>` and `theme-color` in `index.html`, `APP_NAME` in
-   `src/main.ts`, and the cache key `notes:v1:items` (apps on one GitHub Pages
-   origin share `localStorage`, so it must be unique).
+   `src/main.ts`, and the `notes:` prefix of the cache key `notes:v1:items` and
+   the install-hint key `notes:install-hint-dismissed` (apps on one GitHub
+   Pages origin share `localStorage`, so they must be unique).
 3. **Icon.** Replace `public/logo.svg`, then `npm run icons`.
 4. **Data model.** Rewrite `src/notes.ts` for your record type, and add an
    entry for the app in `worker/src/apps.ts` (see below).
@@ -112,6 +113,39 @@ deploy`. The worker rejects unknown fields and tables, missing required fields,
 invalid dates, non-numbers, numbers below `min`, and text outside `oneOf`
 before calling Grist.
 
+### Notifications (ntfy)
+
+A table can push a notification to phones through [ntfy](https://ntfy.sh)
+whenever someone adds a record, e.g. a new quote in a shared family app:
+
+```ts
+quotes: {
+  tableId: 'Quotes',
+  fields: { date: { type: 'date', required: true }, text: { type: 'text', required: true } },
+  notify: {
+    title: 'Hlášky',                                   // app name
+    body: 'text',                                      // field to send, or (item) => string
+    click: 'https://alcariss.github.io/hanushlasky/',  // opened when the notification is tapped
+    tags: ['speech_balloon']                           // optional; emoji names show as icons
+    // server: 'https://ntfy.example.com'              // optional; defaults to https://ntfy.sh
+  }
+}
+```
+
+1. Pick a long random topic name, e.g. `openssl rand -hex 16`. Anyone who knows
+   it can read and send messages on ntfy.sh, so treat it as a password.
+2. `npx wrangler secret put NTFY_TOPIC_<APP_ID>` with that name (e.g.
+   `NTFY_TOPIC_HLASKY`), then `npx wrangler deploy`. Without the secret the
+   app sends nothing.
+3. Each person installs the ntfy app ([iOS](https://apps.apple.com/app/ntfy/id1625396347),
+   [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy)),
+   taps **+**, and subscribes to the same topic on `ntfy.sh`.
+
+The push is sent after the record is saved, through `ctx.waitUntil`. It never
+delays the response, and a failing ntfy only logs `ntfy_error`. Only `add`
+notifies; edits and deletes do not. Everyone subscribed is notified, including
+whoever added the record.
+
 ### Sign-in
 
 1. The app sends the browser to `/auth/login?app&provider&return_to`.
@@ -140,6 +174,7 @@ const store = createStore({
   cache: createCache<Note>('notes:v1:items')
 });
 setupUpdatePrompt(registerSW);                           // from 'virtual:pwa-register'
+setupInstallHint(requiredElement('.pk-login'), { storageKey: 'notes:install-hint-dismissed' });
 ```
 
 - `store.refresh()` / `create()` / `update()` / `remove()` return
@@ -152,9 +187,45 @@ setupUpdatePrompt(registerSW);                           // from 'virtual:pwa-re
   The service worker precaches the app shell and does **not** cache API
   responses: its cache is keyed by URL, not user, so it would show one user's
   data to the next.
-- `@alcariss/pwa-kit/styles.css` styles the login screen, update banner and
-  debug panel (`?debug=1`). Override the `--pk-*` custom properties.
+- `@alcariss/pwa-kit/styles.css` styles the login screen, update banner,
+  install hint and debug panel (`?debug=1`). Override the `--pk-*` custom
+  properties.
 - `tsconfig.base.json` is the shared compiler config to `extends`.
+
+### Install hint
+
+iOS has no install prompt, so users have to be told how to add the app to the
+Home Screen, and how depends on the browser. `setupInstallHint` works that out
+from the user agent and appends a dismissible hint to the element you give it:
+
+```ts
+setupInstallHint(requiredElement('.pk-login'), {
+  storageKey: 'notes:install-hint-dismissed',  // app-specific: apps share one origin
+  signInRequired: true,                        // adds a "sign in inside the installed app" note
+  strings: { title: 'Nainstalujte si aplikaci', iosSafari: ['Klepněte na ⋯ vpravo dole.', /* … */] }
+});
+```
+
+| Where the user is | What the hint says |
+|---|---|
+| Safari, iOS 26+ | ⋯ → Share → Add to Home Screen → Open as Web App |
+| Safari, older iOS / iPad | Share in the toolbar → Add to Home Screen |
+| Chrome, Edge, Firefox… on iOS 16.4+ | Share (address bar or browser menu) → Add to Home Screen |
+| Those browsers before iOS 16.4 | open the page in Safari |
+| Messenger, Facebook, Instagram, WhatsApp, Google app… | open the page in Safari (Chrome on Android) first |
+| Android, desktop Chromium | an **Install** button once the browser fires `beforeinstallprompt`; on Android the ⋮ menu steps until then |
+| Safari 17+ on macOS | File → Add to Dock |
+
+It renders nothing when the app already runs installed (`display-mode:
+standalone`, `navigator.standalone`), on browsers that cannot install
+(Firefox on the desktop), or once dismissed. Every string, including each list
+of steps, can be replaced through `strings`; `DEFAULT_INSTALL_HINT_STRINGS` has
+the English ones. `detectInstallTarget(environment)` exposes the detection on
+its own.
+
+Show it on the sign-in screen: an app installed on iOS has its own storage, so
+a sign-in done in Safari does not carry over. Installing first saves signing
+in twice.
 
 ### Apps still on Apps Script
 
