@@ -8,6 +8,8 @@ export type Env = {
   GOOGLE_CLIENT_SECRET?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  /** Private files an app shows only to signed-in users, keyed `<appId>/<name>`. */
+  MEDIA?: KVNamespace;
 } & Partial<Record<`ALLOWED_EMAILS_${string}` | `NTFY_TOPIC_${string}`, string>>;
 
 /** What the handler needs from the outside world; tests replace both. */

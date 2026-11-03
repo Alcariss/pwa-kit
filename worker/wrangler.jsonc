@@ -3,6 +3,8 @@
   "name": "pwa-kit-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
+  // Private files apps show only to signed-in users (`?action=media`), keyed `<appId>/<name>`.
+  "kv_namespaces": [{ "binding": "MEDIA", "id": "35c31df8c5834c2cb20e69d012aa3ce6" }],
   "observability": {
     "enabled": true
   },
