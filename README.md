@@ -192,8 +192,8 @@ One-time setup for the worker (shared by all apps):
    ```bash
    npx wrangler kv namespace create PUSH
    ```
-   Add the printed `{ "binding": "PUSH", "id": "…" }` to `kv_namespaces` in
-   `wrangler.jsonc`, then `npx wrangler deploy`.
+   `wrangler.jsonc` already binds the one on my account; on another account,
+   replace its `id` with the printed one. Then `npx wrangler deploy`.
 
 KV rather than a Grist table: subscriptions are worker plumbing, not app data,
 so they stay out of the documents people edit, need no per-app table, and are

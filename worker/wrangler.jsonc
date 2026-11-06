@@ -4,10 +4,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   // Private files apps show only to signed-in users (`?action=media`), keyed `<appId>/<name>`.
-  // PUSH: Web Push subscriptions, keyed `<appId>/<sha256(endpoint)>`. Create it once with
-  // `npx wrangler kv namespace create PUSH` and add { "binding": "PUSH", "id": "<id>" } here.
-  // Without it (or the VAPID secrets) the worker sends no Web Push.
-  "kv_namespaces": [{ "binding": "MEDIA", "id": "35c31df8c5834c2cb20e69d012aa3ce6" }],
+  // PUSH: Web Push subscriptions, keyed `<appId>/<sha256(endpoint)>` (created with
+  // `npx wrangler kv namespace create PUSH`). Without it, or the VAPID secrets, no Web Push.
+  "kv_namespaces": [
+    { "binding": "MEDIA", "id": "35c31df8c5834c2cb20e69d012aa3ce6" },
+    { "binding": "PUSH", "id": "31e86ed4539847aebf3655ecb2b09ac8" }
+  ],
   "observability": {
     "enabled": true
   },
