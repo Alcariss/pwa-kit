@@ -16,8 +16,16 @@ export function ntfyTopic(env: Env, appId: string): string | null {
   return topic ? topic : null;
 }
 
-function truncate(text: string): string {
-  return text.length > MAX_MESSAGE_LENGTH ? `${text.slice(0, MAX_MESSAGE_LENGTH - 1)}…` : text;
+/** The `body` field (or function) of the item, trimmed and shortened; the title when empty. */
+export function messageText(
+  body: NotifySpec['body'],
+  item: Readonly<Record<string, unknown>>,
+  fallback: string,
+  maxLength = MAX_MESSAGE_LENGTH
+): string {
+  const raw = typeof body === 'function' ? body(item) : item[body];
+  const text = String(raw ?? '').trim();
+  return (text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text) || fallback;
 }
 
 export type NtfyMessage = {
@@ -30,8 +38,7 @@ export type NtfyMessage = {
 
 /** The JSON ntfy accepts on its root URL. JSON, not headers, so titles like "Hlášky" survive. */
 export function buildNotification(spec: NotifySpec, topic: string, item: Record<string, unknown>): NtfyMessage {
-  const raw = typeof spec.body === 'function' ? spec.body(item) : item[spec.body];
-  const message = truncate(String(raw ?? '').trim()) || spec.title;
+  const message = messageText(spec.body, item, spec.title);
   return {
     topic,
     title: spec.title,

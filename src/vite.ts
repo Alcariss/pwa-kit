@@ -1,5 +1,6 @@
-import { loadEnv, mergeConfig, type UserConfig, type UserConfigFnObject } from 'vite';
+import { loadEnv, mergeConfig, type Plugin, type UserConfig, type UserConfigFnObject } from 'vite';
 import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa';
+import { PUSH_SW_FILE, pushServiceWorkerSource } from './sw-push.js';
 
 type ManifestIcon = NonNullable<ManifestOptions['icons']>[number];
 
@@ -39,10 +40,21 @@ export function normalizeBase(value: string | undefined): string {
   return withLeading.endsWith('/') ? withLeading : `${withLeading}/`;
 }
 
+/** Emits the push and notification-click handlers that the service worker imports. */
+export function pushServiceWorkerPlugin(): Plugin {
+  return {
+    name: 'pwa-kit:push-sw',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: PUSH_SW_FILE, source: pushServiceWorkerSource() });
+    }
+  };
+}
+
 /**
  * The complete Vite config of an app: base path from `VITE_BASE_PATH`,
- * manifest, service worker with a prompt-to-update flow, and
- * `__APP_VERSION__` from `VITE_APP_VERSION`.
+ * manifest, service worker with a prompt-to-update flow and Web Push
+ * handlers, and `__APP_VERSION__` from `VITE_APP_VERSION`.
  */
 export function definePwaApp(app: PwaAppOptions): UserConfigFnObject {
   return ({ mode }) => {
@@ -55,6 +67,7 @@ export function definePwaApp(app: PwaAppOptions): UserConfigFnObject {
         __APP_VERSION__: JSON.stringify(env.VITE_APP_VERSION || 'dev')
       },
       plugins: [
+        pushServiceWorkerPlugin(),
         VitePWA({
           registerType: 'prompt',
           includeAssets: app.includeAssets ?? DEFAULT_INCLUDE_ASSETS,
@@ -81,7 +94,9 @@ export function definePwaApp(app: PwaAppOptions): UserConfigFnObject {
             navigateFallback: 'index.html',
             cleanupOutdatedCaches: true,
             clientsClaim: true,
-            skipWaiting: false
+            skipWaiting: false,
+            // `push` and `notificationclick` handlers; see sw-push.ts.
+            importScripts: [PUSH_SW_FILE]
           }
         })
       ]

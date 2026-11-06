@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { APPS, type AppSpec } from '../src/apps.js';
 import { buildNotification } from '../src/notify.js';
-import { APP_ORIGIN, ME, PARTNER, sessionFor, setup } from './harness.js';
+import { APP_ORIGIN, ME, sessionFor, setup } from './harness.js';
 
 // A shared quotes table like Hlášky's, registered only for these tests.
 const QUOTES: AppSpec = {
@@ -126,30 +126,5 @@ describe('buildNotification', () => {
   it('falls back to the title for an empty message and shortens long ones', () => {
     expect(buildNotification(spec, 't', { text: '  ' }).message).toBe('Hlášky');
     expect(buildNotification(spec, 't', { text: 'a'.repeat(5000) }).message).toHaveLength(1000);
-  });
-});
-
-describe('hanushlasky', () => {
-  it('shares quotes across the family and notifies on each new one', async () => {
-    const { send, backends, settle } = setup({
-      ALLOWED_EMAILS_HANUSHLASKY: `${ME},${PARTNER}`,
-      NTFY_TOPIC_HANUSHLASKY: 'family-topic'
-    });
-    const as = async (email: string): Promise<RequestInit> => ({
-      headers: { Authorization: `Bearer ${await sessionFor(email, 'hanushlasky')}`, Origin: APP_ORIGIN }
-    });
-
-    await send('/hanushlasky?action=add&date=2026-11-03&text=Ahoj', await as(ME));
-    await settle();
-    const response = await send('/hanushlasky?action=fetch', await as(PARTNER));
-
-    expect(backends.gristCalls()[0]?.url.pathname).toMatch(/\/docs\/r7UEV7ogACUR\/tables\/Sheet1\/records$/);
-    expect(await response.json()).toMatchObject({ data: [{ date: '2026-11-03', text: 'Ahoj' }] });
-    expect(backends.ntfyCalls()[0]?.body).toMatchObject({
-      topic: 'family-topic',
-      title: 'Hlášky',
-      message: 'Ahoj',
-      click: 'https://alcariss.github.io/hanushlasky/'
-    });
   });
 });

@@ -146,6 +146,77 @@ delays the response, and a failing ntfy only logs `ntfy_error`. Only `add`
 notifies; edits and deletes do not. Everyone subscribed is notified, including
 whoever added the record.
 
+The ntfy iOS app does not show these alerts at the moment
+([binwiederhier/ntfy#1844](https://github.com/binwiederhier/ntfy/issues/1844)),
+so on iPhones prefer Web Push below.
+
+### Notifications (Web Push)
+
+A table can also notify the app itself: every device that turned
+notifications on in the app gets a system notification (and an app icon badge
+where the platform supports it) whenever *someone else* adds a record. No extra
+app to install, but on iPhone and iPad it needs iOS 16.4+ and the app added to
+the Home Screen.
+
+```ts
+quotes: {
+  tableId: 'Quotes',
+  fields: { date: { type: 'date', required: true }, text: { type: 'text', required: true } },
+  push: {
+    title: 'Hlášky',                                   // app name
+    body: 'text',                                      // field to send, or (item) => string
+    click: 'https://alcariss.github.io/hanushlasky/',  // opened when the notification is tapped
+    // icon: 'https://…/icon.png',                     // optional; defaults to the app's pwa-192x192.png
+    // tag: 'quote'                                    // optional; same tag replaces the previous one
+  }
+}
+```
+
+Don't put `push` on an `ownerColumn` table: every subscriber of the app gets
+the text.
+
+One-time setup for the worker (shared by all apps):
+
+1. **VAPID keys** identify the worker to the push services. Generate a pair
+   once and keep it: a new pair breaks every existing subscription until each
+   device turns notifications off and on again (which re-subscribes it with the
+   new key):
+   ```bash
+   npx web-push generate-vapid-keys      # prints a public and a private key, both base64url
+   npx wrangler secret put VAPID_PUBLIC_KEY
+   npx wrangler secret put VAPID_PRIVATE_KEY
+   npx wrangler secret put VAPID_SUBJECT  # mailto:you@example.com, where push services can reach you
+   ```
+2. **Storage.** Subscriptions live in a Workers KV namespace bound as `PUSH`,
+   keyed `<appId>/<sha256(endpoint)>`, each with the email that subscribed it:
+   ```bash
+   npx wrangler kv namespace create PUSH
+   ```
+   Add the printed `{ "binding": "PUSH", "id": "…" }` to `kv_namespaces` in
+   `wrangler.jsonc`, then `npx wrangler deploy`.
+
+KV rather than a Grist table: subscriptions are worker plumbing, not app data,
+so they stay out of the documents people edit, need no per-app table, and are
+read and written without a Grist round trip. Reads after a write can lag up to
+a minute across Cloudflare locations, which a notification can live with.
+
+Without the binding or any of the three secrets, the worker sends nothing and
+the subscribe calls answer `MISCONFIGURED`. The app's endpoints, all behind
+the usual sign-in:
+
+| `?action=` | Does |
+|---|---|
+| `push-key` | returns `{ publicKey }`, the VAPID public key |
+| `push-subscribe&subscription=<PushSubscription JSON>` | stores the device for the signed-in email |
+| `push-unsubscribe&endpoint=<url>` | forgets the device, if the caller subscribed it |
+
+Only endpoints of the Apple, Google, Mozilla and Microsoft push services are
+accepted. After an `add`, the worker encrypts the message for each device
+(RFC 8291, `aes128gcm`), signs it with VAPID (RFC 8292) and sends it through
+`ctx.waitUntil`: it never delays or fails the save. The author's own devices
+are skipped, subscriptions the push service reports gone (404/410) are
+deleted, and other failures log `push_error`.
+
 ### Sign-in
 
 1. The app sends the browser to `/auth/login?app&provider&return_to`.
@@ -187,9 +258,11 @@ setupInstallHint(requiredElement('.pk-login'), { storageKey: 'notes:install-hint
   The service worker precaches the app shell and does **not** cache API
   responses: its cache is keyed by URL, not user, so it would show one user's
   data to the next.
+  It also loads `pwa-kit-push-sw.js` (emitted next to `sw.js`) with the
+  `push` and `notificationclick` handlers for Web Push.
 - `@alcariss/pwa-kit/styles.css` styles the login screen, update banner,
-  install hint and debug panel (`?debug=1`). Override the `--pk-*` custom
-  properties.
+  install hint, notifications switch and debug panel (`?debug=1`). Override
+  the `--pk-*` custom properties.
 - `tsconfig.base.json` is the shared compiler config to `extends`.
 
 ### Install hint
@@ -226,6 +299,46 @@ its own.
 Show it on the sign-in screen: an app installed on iOS has its own storage, so
 a sign-in done in Safari does not carry over. Installing first saves signing
 in twice.
+
+### Push notifications
+
+For apps whose worker table has `push` (see above):
+
+```ts
+const push = createPushNotifications(client);   // also clears the badge whenever the app comes to the front
+// once signed in:
+mountPushToggle(requiredElement('#push'), push, {
+  strings: {
+    label: 'Upozornění na nové hlášky',
+    denied: 'Upozornění jsou zablokovaná. Povolte je v Nastavení → Oznámení.',
+    needsInstall: 'Upozornění fungují, až si aplikaci přidáte na plochu a otevřete ji odtamtud.',
+    error: 'Upozornění se nepodařilo změnit. Zkuste to znovu.'
+  }
+});
+// on sign-out: await push.disable()
+```
+
+`push.state()` resolves to:
+
+| State | Meaning | The switch shows |
+|---|---|---|
+| `needs-install` | iPhone/iPad in a browser tab: Web Push only works from the Home Screen | `needsInstall` (pass `''` and show the install hint instead) |
+| `unsupported` | no Push API (desktop Safari before 16, iOS before 16.4, …) | nothing |
+| `denied` | the user blocked notifications | `denied` |
+| `off` / `on` | | the switch |
+
+`push.enable()` asks for permission, subscribes the device with the worker's
+VAPID key and registers it with the worker. iOS only shows the permission
+prompt for a user gesture, so call it straight from a click (the switch does).
+`push.disable()` unregisters and unsubscribes. `push.sync()` re-registers an
+existing subscription (the switch does so when mounted, which also moves a
+device to whoever is signed in now). `push.clearBadge()` clears the app badge
+and closes the app's notifications; it runs on every `visibilitychange` to
+visible unless `clearBadgeOnVisible: false`.
+
+In the service worker, a push shows the notification and sets the app badge to
+the number of the app's notifications still shown; tapping one focuses an open
+window of the app (or opens the `click` URL) and clears the badge.
 
 ### Apps still on Apps Script
 

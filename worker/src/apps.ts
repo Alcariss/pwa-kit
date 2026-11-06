@@ -34,6 +34,24 @@ export type TableSpec = {
   ownerColumn?: string;
   /** Push a notification through ntfy after each `add`. Needs the `NTFY_TOPIC_<APP_ID>` secret. */
   notify?: NotifySpec;
+  /**
+   * Web Push to every device subscribed to the app (except the author's) after
+   * each `add`. Needs the `VAPID_*` secrets and the `PUSH` KV binding.
+   */
+  push?: PushSpec;
+};
+
+export type PushSpec = {
+  /** Notification title, usually the app name. */
+  title: string;
+  /** API field whose value becomes the text, or a function of the new item. */
+  body: string | ((item: Readonly<Record<string, unknown>>) => string);
+  /** Page opened when the notification is tapped, e.g. the app's GitHub Pages URL. */
+  click: string;
+  /** Icon URL; defaults to the app's `pwa-192x192.png`. */
+  icon?: string;
+  /** Notifications with the same tag replace each other instead of piling up. */
+  tag?: string;
 };
 
 export type NotifySpec = {
@@ -95,7 +113,7 @@ export const APPS: Readonly<Record<string, AppSpec>> = {
           text: { type: 'text', required: true, maxLength: 5000 }
         },
         timestamps: TIMESTAMPS,
-        notify: { title: 'Hlášky', body: 'text', click: 'https://alcariss.github.io/hanushlasky/' }
+        push: { title: 'Hlášky', body: 'text', click: 'https://alcariss.github.io/hanushlasky/' }
       }
     }
   },

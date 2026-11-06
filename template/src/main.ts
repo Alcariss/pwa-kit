@@ -8,12 +8,14 @@ import {
   createApiClient,
   createAuth,
   createCache,
+  createPushNotifications,
   createResource,
   createStore,
   escapeHtml,
   formatAge,
   formatIsoDate,
   isDebugEnabled,
+  mountPushToggle,
   readApiConfig,
   renderDiagnostics,
   renderLoginScreen,
@@ -22,12 +24,18 @@ import {
   setupUpdatePrompt,
   toIsoDate,
   type Diagnostics,
-  type InstallHint
+  type InstallHint,
+  type PushToggle
 } from '@alcariss/pwa-kit';
 import { toNote, toNoteParams, type Note, type NoteInput } from './notes';
 
 const APP_NAME = 'Notes';
 const LOCALE = 'en';
+/**
+ * Web Push about records other people add. Turn on once the app's table has
+ * `push` in worker/src/apps.ts; notes are private, so the starter leaves it off.
+ */
+const PUSH_NOTIFICATIONS = false;
 
 const config = readApiConfig(import.meta.env);
 const auth = createAuth({ apiUrl: config.primaryUrl });
@@ -40,8 +48,11 @@ const root = requiredElement('#app');
 const signInRequired = config.authProviders.length > 0;
 
 setupUpdatePrompt(registerSW);
+// Also clears the app badge whenever the app comes to the front.
+const push = PUSH_NOTIFICATIONS ? createPushNotifications(client) : null;
 
 let installHint: InstallHint | null = null;
+let pushToggle: PushToggle | null = null;
 
 /** Shown before sign-in too: an app installed on iOS starts signed out. */
 function showInstallHint(target: HTMLElement): void {
@@ -54,6 +65,8 @@ function showInstallHint(target: HTMLElement): void {
 
 function showLogin(message: string | null = null): void {
   store.clear();
+  pushToggle?.dispose();
+  pushToggle = null;
   renderLoginScreen(root, {
     title: APP_NAME,
     providers: config.authProviders,
@@ -71,6 +84,7 @@ function showApp(): void {
         ${signInRequired ? '<button id="logout" type="button" class="link">Sign out</button>' : ''}
       </header>
       <div id="install-hint"></div>
+      <div id="push"></div>
       <form id="add-form" class="card">
         <textarea id="add-text" rows="3" required placeholder="Write a note…"></textarea>
         <div class="row">
@@ -85,6 +99,10 @@ function showApp(): void {
     </main>
   `;
   showInstallHint(requiredElement('#install-hint'));
+  if (push) {
+    // On iOS in Safari this shows "add to Home Screen first"; the install hint above says how.
+    pushToggle = mountPushToggle(requiredElement('#push'), push);
+  }
 
   const form = requiredElement<HTMLFormElement>('#add-form');
   const text = requiredElement<HTMLTextAreaElement>('#add-text');
@@ -121,7 +139,9 @@ function showApp(): void {
     }
   });
 
-  document.querySelector('#logout')?.addEventListener('click', () => {
+  document.querySelector('#logout')?.addEventListener('click', async () => {
+    // Signed-out devices should stop getting other people's records.
+    await push?.disable().catch(() => undefined);
     auth.logout();
     showLogin();
   });
