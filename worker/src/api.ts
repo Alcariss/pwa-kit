@@ -5,6 +5,7 @@ import { parseInput, toItem } from './fields.js';
 import { gristTable, UpstreamError, type GristRecord, type GristTable } from './grist.js';
 import { corsHeaders, failure, preflight, success, type ResponseContext } from './http.js';
 import { ntfyTopic, publishNotification } from './notify.js';
+import { handlePushAction, PUSH_ACTIONS, pushToSubscribers, vapidKeys } from './push.js';
 import { readSession } from './tokens.js';
 
 type ActionContext = {
@@ -169,11 +170,22 @@ export async function handleApi(
     return failure(ERROR_CODES.FORBIDDEN, 'This account has no access to the app', 403, respond);
   }
 
-  if (url.searchParams.get('action') === 'media') {
+  const actionName = url.searchParams.get('action') ?? '';
+  if (actionName === 'media') {
     return await serveMedia(env, appId, url.searchParams.get('name'), respond);
   }
+  if ((PUSH_ACTIONS as readonly string[]).includes(actionName)) {
+    try {
+      return await handlePushAction(actionName, {
+        env, app, appId, claims, params: url.searchParams, respond, now: deps.now
+      });
+    } catch (error) {
+      console.error(JSON.stringify({ event: 'api_error', app: appId, error: String(error) }));
+      return failure(ERROR_CODES.INTERNAL_ERROR, 'Unexpected error', 500, respond);
+    }
+  }
 
-  const action = ACTIONS[url.searchParams.get('action') ?? ''];
+  const action = ACTIONS[actionName];
   if (action === undefined) {
     return failure(ERROR_CODES.UNSUPPORTED_ACTION, 'Unsupported action', 400, respond);
   }
@@ -198,6 +210,11 @@ export async function handleApi(
   const onAdded = (item: Record<string, unknown>): void => {
     if (notify && topic) {
       waitUntil(publishNotification(deps.fetch, notify, topic, item, appId));
+    }
+    if (spec.push && env.PUSH && vapidKeys(env) !== null) {
+      waitUntil(pushToSubscribers({
+        env, appId, spec: spec.push, item, author: claims.sub, fetch: deps.fetch, nowSeconds: nowSeconds(deps)
+      }));
     }
   };
 

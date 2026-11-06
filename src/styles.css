@@ -134,3 +134,75 @@
 .pk-debug dd {
   margin: 0;
 }
+
+.pk-push {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  color: var(--pk-text);
+  font-size: 0.95rem;
+}
+
+.pk-push p {
+  margin: 0;
+}
+
+.pk-push-toggle {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.pk-push-toggle input {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 2.6rem;
+  height: 1.5rem;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--pk-muted);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pk-push-toggle input::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: var(--pk-surface);
+  transition: transform 0.15s;
+}
+
+.pk-push-toggle input:checked {
+  background: var(--pk-accent);
+}
+
+.pk-push-toggle input:checked::after {
+  transform: translateX(1.1rem);
+}
+
+.pk-push-toggle input:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.pk-push-toggle input:focus-visible {
+  outline: 2px solid var(--pk-accent);
+  outline-offset: 2px;
+}
+
+.pk-push-note {
+  color: var(--pk-muted);
+  font-size: 0.85rem;
+}
+
+.pk-push-error {
+  color: #b91c1c;
+}

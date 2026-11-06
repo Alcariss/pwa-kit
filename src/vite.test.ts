@@ -36,4 +36,17 @@ describe('definePwaApp', () => {
     expect(config.base).toBe('/notes/');
     expect(config.define).toEqual({ __APP_VERSION__: '"abc1234"' });
   });
+
+  it('emits the push handlers for the service worker', () => {
+    const config = definePwaApp({
+      name: 'Notes',
+      description: 'Test',
+      lang: 'en',
+      themeColor: '#000000',
+      backgroundColor: '#ffffff'
+    })({ mode: 'production', command: 'build' });
+
+    const plugins = (config.plugins ?? []).flat() as { name?: string }[];
+    expect(plugins.map((plugin) => plugin.name)).toContain('pwa-kit:push-sw');
+  });
 });

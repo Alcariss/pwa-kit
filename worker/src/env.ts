@@ -10,6 +10,12 @@ export type Env = {
   GITHUB_CLIENT_SECRET?: string;
   /** Private files an app shows only to signed-in users, keyed `<appId>/<name>`. */
   MEDIA?: KVNamespace;
+  /** Web Push subscriptions, keyed `<appId>/<sha256(endpoint)>`. */
+  PUSH?: KVNamespace;
+  VAPID_PUBLIC_KEY?: string;
+  VAPID_PRIVATE_KEY?: string;
+  /** `mailto:you@example.com`: who push services contact about misbehaving pushes. */
+  VAPID_SUBJECT?: string;
 } & Partial<Record<`ALLOWED_EMAILS_${string}` | `NTFY_TOPIC_${string}`, string>>;
 
 /** What the handler needs from the outside world; tests replace both. */

@@ -29,7 +29,7 @@ export function sessionFor(email: string, app = 'notes', issuedAt = NOW_S, ttl =
   return issueSession(email, app, 'test-secret-that-is-long-enough', issuedAt, ttl);
 }
 
-type Call = { method: string; url: URL; body: unknown };
+type Call = { method: string; url: URL; body: unknown; headers: Headers };
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -62,11 +62,18 @@ export class FakeBackends {
     return this.calls.filter((call) => call.url.host === 'ntfy.sh');
   }
 
+  /** Status the fake push service answers per endpoint; 201 otherwise. */
+  readonly pushStatus = new Map<string, number>();
+
+  pushCalls(): Call[] {
+    return this.calls.filter((call) => call.url.host.endsWith('push.apple.com') || call.url.host === 'fcm.googleapis.com');
+  }
+
   readonly fetch: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? 'GET';
     const body = typeof init?.body === 'string' && /^[[{]/.test(init.body) ? JSON.parse(init.body) : init?.body;
-    this.calls.push({ method, url, body });
+    this.calls.push({ method, url, body, headers: new Headers(init?.headers) });
 
     if (url.host === 'grist.example') {
       return this.grist(method, url, body);
@@ -76,6 +83,9 @@ export class FakeBackends {
         throw new TypeError('network error');
       }
       return json({ id: 'msg' });
+    }
+    if (url.host.endsWith('push.apple.com') || url.host === 'fcm.googleapis.com') {
+      return new Response(null, { status: this.pushStatus.get(url.href) ?? 201 });
     }
     if (url.href === 'https://oauth2.googleapis.com/token') {
       return json({ access_token: 'google-access' });
@@ -140,4 +150,31 @@ export function setup(envOverrides: Partial<Env> = {}) {
     settle: () => Promise.all(background),
     send: (path: string, init: RequestInit = {}) => handle(new Request(`${WORKER}${path}`, init), env, ctx)
   };
+}
+
+/** Enough of a KV namespace for `PUSH`: get, put, delete and prefix list. */
+export class FakeKv {
+  readonly data = new Map<string, string>();
+
+  async get(key: string, type?: string): Promise<unknown> {
+    const value = this.data.get(key);
+    return value === undefined ? null : type === 'json' ? JSON.parse(value) : value;
+  }
+
+  async put(key: string, value: string): Promise<void> {
+    this.data.set(key, value);
+  }
+
+  async delete(key: string): Promise<void> {
+    this.data.delete(key);
+  }
+
+  async list(options: { prefix?: string } = {}) {
+    const keys = [...this.data.keys()].filter((key) => key.startsWith(options.prefix ?? '')).map((name) => ({ name }));
+    return { keys, list_complete: true, cacheStatus: null };
+  }
+
+  asNamespace(): KVNamespace {
+    return this as unknown as KVNamespace;
+  }
 }

@@ -4,7 +4,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   // Private files apps show only to signed-in users (`?action=media`), keyed `<appId>/<name>`.
-  "kv_namespaces": [{ "binding": "MEDIA", "id": "35c31df8c5834c2cb20e69d012aa3ce6" }],
+  // PUSH: Web Push subscriptions, keyed `<appId>/<sha256(endpoint)>` (created with
+  // `npx wrangler kv namespace create PUSH`). Without it, or the VAPID secrets, no Web Push.
+  "kv_namespaces": [
+    { "binding": "MEDIA", "id": "35c31df8c5834c2cb20e69d012aa3ce6" },
+    { "binding": "PUSH", "id": "31e86ed4539847aebf3655ecb2b09ac8" }
+  ],
   "observability": {
     "enabled": true
   },
@@ -12,6 +17,8 @@
   //   GRIST_API_KEY, SESSION_SECRET,
   //   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
   //   ALLOWED_EMAILS_<APP_ID>   e.g. ALLOWED_EMAILS_NOTES="me@example.com,partner@example.com"
+  //   NTFY_TOPIC_<APP_ID>       optional, for tables with `notify`
+  //   VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT   optional, for tables with `push`
   "vars": {
     "GRIST_BASE_URL": "https://docs.getgrist.com",
     // Where `npm run dev` / `npm run preview` of an app may receive a session.
