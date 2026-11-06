@@ -1,0 +1,208 @@
+/* Base styles for the pieces pwa-kit renders. Override the custom properties per app. */
+:root {
+  --pk-accent: #2563eb;
+  --pk-accent-text: #ffffff;
+  --pk-surface: #ffffff;
+  --pk-text: #1f2933;
+  --pk-muted: #6b7280;
+  --pk-radius: 10px;
+}
+
+.pk-update-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1rem;
+  padding-top: max(0.6rem, env(safe-area-inset-top));
+  background: var(--pk-accent);
+  color: var(--pk-accent-text);
+  font-size: 0.95rem;
+}
+
+.pk-update-banner button {
+  border: 1px solid currentColor;
+  border-radius: var(--pk-radius);
+  background: transparent;
+  color: inherit;
+  padding: 0.3rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.pk-login {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 22rem;
+  margin: 15vh auto 0;
+  padding: 0 1rem;
+  text-align: center;
+  color: var(--pk-text);
+}
+
+.pk-login-message {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.pk-login-button {
+  padding: 0.8rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: var(--pk-radius);
+  background: var(--pk-surface);
+  color: var(--pk-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pk-login-button:hover {
+  border-color: var(--pk-accent);
+}
+
+.pk-install-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--pk-accent);
+  border-radius: var(--pk-radius);
+  background: var(--pk-surface);
+  color: var(--pk-text);
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.pk-install-hint p {
+  margin: 0;
+}
+
+.pk-install-hint-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.pk-install-hint-steps li + li {
+  margin-top: 0.25rem;
+}
+
+.pk-install-hint-note {
+  color: var(--pk-muted);
+  font-size: 0.85rem;
+}
+
+.pk-install-hint-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.pk-install-hint-actions button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--pk-accent);
+  border-radius: var(--pk-radius);
+  background: transparent;
+  color: var(--pk-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pk-install-hint-actions .pk-install-hint-install {
+  background: var(--pk-accent);
+  color: var(--pk-accent-text);
+}
+
+.pk-debug {
+  margin-top: 2rem;
+  font-size: 0.8rem;
+  color: var(--pk-muted);
+}
+
+.pk-debug dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  word-break: break-all;
+}
+
+.pk-debug dd {
+  margin: 0;
+}
+
+.pk-push {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 1rem 0;
+  color: var(--pk-text);
+  font-size: 0.95rem;
+}
+
+.pk-push p {
+  margin: 0;
+}
+
+.pk-push-toggle {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.pk-push-toggle input {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 2.6rem;
+  height: 1.5rem;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--pk-muted);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.pk-push-toggle input::after {
+  content: '';
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 50%;
+  background: var(--pk-surface);
+  transition: transform 0.15s;
+}
+
+.pk-push-toggle input:checked {
+  background: var(--pk-accent);
+}
+
+.pk-push-toggle input:checked::after {
+  transform: translateX(1.1rem);
+}
+
+.pk-push-toggle input:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.pk-push-toggle input:focus-visible {
+  outline: 2px solid var(--pk-accent);
+  outline-offset: 2px;
+}
+
+.pk-push-note {
+  color: var(--pk-muted);
+  font-size: 0.85rem;
+}
+
+.pk-push-error {
+  color: #b91c1c;
+}
